@@ -1,0 +1,12 @@
+.DS_Store
+*.log
+
+server/__pycache__/
+server/.venv/
+server/venv/
+*.pyc
+
+server/*.db
+
+firmware/src/secrets.h
+server/.env
