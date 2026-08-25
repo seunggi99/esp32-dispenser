@@ -1,5 +1,6 @@
 .DS_Store
 *.log
+Claude.MD
 
 server/__pycache__/
 server/.venv/
