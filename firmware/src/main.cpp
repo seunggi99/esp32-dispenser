@@ -1,35 +1,41 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
+#include <HX711.h>
 
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
+HX711 scale;
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
+
   Wire.begin(21, 22);
-
-  uint8_t addr = 0;
-  for (uint8_t a = 1; a < 127; a++) {
-    Wire.beginTransmission(a);
-    if (Wire.endTransmission() == 0) {
-      Serial.printf("found 0x%02X\n", a);
-      addr = a;
-    }
-  }
-  if (addr == 0) { Serial.println("no i2c device"); return; }
-
-  if (!display.begin(SSD1306_SWITCHCAPVCC, addr)) {
-    Serial.println("ssd1306 init failed");
-    return;
-  }
-  display.clearDisplay();
-  display.setTextSize(2);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 20);
-  display.println("HELLO");
-  display.display();
-  Serial.println("display ok");
+
+  scale.begin(16, 4);
+  scale.set_scale(405.0f);
+
+  Serial.println("taring... keep empty");
+  delay(2000);
+  scale.tare(20);
+  Serial.println("ready");
 }
 
-void loop() {}
+void loop() {
+  float g = scale.get_units(10);
+
+  Serial.printf("%.2f g\n", g);
+
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setCursor(0, 8);
+  display.printf("%.1f", g);
+  display.setTextSize(1);
+  display.setCursor(0, 40);
+  display.println("gram");
+  display.display();
+
+  delay(200);
+}
