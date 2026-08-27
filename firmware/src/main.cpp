@@ -60,7 +60,7 @@ void pumpOff() {
   digitalWrite(PIN_PUMP_IB, LOW);
 }
 
-void runPump(uint32_t ms) {
+void runPump(uint32_t ms, long commandId) {
   drawStatus(scale.get_units(5), "RUNNING");
 
   digitalWrite(PIN_PUMP_IA, HIGH);
@@ -69,10 +69,10 @@ void runPump(uint32_t ms) {
   pumpOff();
 
   // 장비는 명령 수행 여부만 보고한다. 성공 판정은 서버가 한다.
-  char payload[128];
+  char payload[160];
   snprintf(payload, sizeof(payload),
-           "{\"device\":\"%s\",\"duration_ms\":%lu,\"reported\":\"done\"}",
-           DEVICE_ID, ms);
+           "{\"device\":\"%s\",\"command_id\":%ld,\"duration_ms\":%lu,\"reported\":\"done\"}",
+           DEVICE_ID, commandId, ms);
   mqtt.publish(topicResult, payload);
   Serial.printf("result -> %s\n", payload);
 }
@@ -85,6 +85,13 @@ void onMessage(char* topic, byte* payload, unsigned int len) {
 
   Serial.printf("cmd <- %s\n", buf);
 
+  // command_id 추출
+  char* cidp = strstr(buf, "command_id");
+  if (!cidp) { Serial.println("missing command_id"); return; }
+  cidp = strchr(cidp, ':');
+  if (!cidp) return;
+  long commandId = strtol(cidp + 1, nullptr, 10);
+
   // {"duration_ms":3000} 형태에서 숫자만 추출
   char* p = strstr(buf, "duration_ms");
   if (!p) return;
@@ -96,7 +103,7 @@ void onMessage(char* topic, byte* payload, unsigned int len) {
     Serial.println("invalid duration");
     return;
   }
-  runPump((uint32_t)ms);
+  runPump((uint32_t)ms, commandId);
 }
 
 void connectWifi() {
