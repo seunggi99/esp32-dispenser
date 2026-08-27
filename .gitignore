@@ -12,4 +12,5 @@ server/*.db
 firmware/src/secrets.h
 server/.env
 
-scripts/*.csv
+*.csv
+!docs/experiments/*.csv
