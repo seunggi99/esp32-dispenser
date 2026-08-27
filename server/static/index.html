@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>dispenser dashboard</title>
+<style>
+  body { font-family: monospace; margin: 1rem; }
+  h2 { margin-top: 2rem; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid #999; padding: 4px 8px; text-align: left; white-space: nowrap; }
+  .ok { color: green; }
+  .bad { color: #b00; font-weight: bold; }
+  tr.halted { background: #ffdddd; }
+  tr.mismatch { background: #ffe27a; }
+</style>
+</head>
+<body>
+
+<h2>Devices</h2>
+<table id="devices">
+  <thead><tr>
+    <th>device_id</th><th>weight_g</th><th>received_at</th><th>connection</th><th>halt</th>
+  </tr></thead>
+  <tbody></tbody>
+</table>
+
+<h2>Commands (recent 20)</h2>
+<table id="commands">
+  <thead><tr>
+    <th>id</th><th>device_id</th><th>duration_ms</th><th>issued_at</th>
+    <th>weight_before</th><th>weight_after</th><th>delta</th>
+    <th>device_reported</th><th>verdict</th><th>weight_pass</th>
+    <th>result_timeout</th><th>retry_count</th>
+  </tr></thead>
+  <tbody></tbody>
+</table>
+
+<script>
+function fmt(v) {
+  return (v === null || v === undefined) ? '' : v;
+}
+
+function renderDevices(devices) {
+  const body = document.querySelector('#devices tbody');
+  body.innerHTML = '';
+  for (const [deviceId, d] of Object.entries(devices)) {
+    const tr = document.createElement('tr');
+    if (d.halted) tr.classList.add('halted');
+    tr.innerHTML = `
+      <td>${deviceId}</td>
+      <td>${fmt(d.weight_g)}</td>
+      <td>${fmt(d.received_at)}</td>
+      <td class="${d.connected ? 'ok' : 'bad'}">${d.connected ? 'connected' : 'disconnected'}</td>
+      <td class="${d.halted ? 'bad' : 'ok'}">${d.halted ? 'HALTED' : 'ok'}</td>
+    `;
+    body.appendChild(tr);
+  }
+}
+
+function renderCommands(commands) {
+  const body = document.querySelector('#commands tbody');
+  body.innerHTML = '';
+  for (const c of commands) {
+    const delta = (c.weight_before !== null && c.weight_after !== null)
+      ? (c.weight_after - c.weight_before).toFixed(2)
+      : '';
+    const weightPass = c.weight_pass === null ? '' : (c.weight_pass ? 'pass' : 'fail');
+    const tr = document.createElement('tr');
+    if (c.mismatch) tr.classList.add('mismatch');
+    tr.innerHTML = `
+      <td>${c.id}</td>
+      <td>${c.device_id}</td>
+      <td>${c.duration_ms}</td>
+      <td>${fmt(c.issued_at)}</td>
+      <td>${fmt(c.weight_before)}</td>
+      <td>${fmt(c.weight_after)}</td>
+      <td>${delta}</td>
+      <td>${fmt(c.device_reported)}</td>
+      <td>${fmt(c.verdict)}</td>
+      <td>${weightPass}</td>
+      <td>${c.result_timeout}</td>
+      <td>${c.retry_count}</td>
+    `;
+    body.appendChild(tr);
+  }
+}
+
+function render(snapshot) {
+  renderDevices(snapshot.devices);
+  renderCommands(snapshot.commands);
+}
+
+const source = new EventSource('/events');
+source.onmessage = (e) => render(JSON.parse(e.data));
+</script>
+
+</body>
+</html>

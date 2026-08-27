@@ -150,3 +150,32 @@ def clear_halt(device_id: str) -> None:
             """,
             (device_id,),
         )
+
+
+def list_recent_commands(limit: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM commands ORDER BY id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def list_latest_telemetry() -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT t.device_id, t.weight_g, t.received_at
+            FROM telemetry t
+            INNER JOIN (
+                SELECT device_id, MAX(id) AS max_id FROM telemetry GROUP BY device_id
+            ) latest ON t.device_id = latest.device_id AND t.id = latest.max_id
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def list_device_states() -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute("SELECT device_id, halted, halted_at FROM device_state").fetchall()
+        return [dict(row) for row in rows]
