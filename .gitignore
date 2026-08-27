@@ -12,4 +12,4 @@ server/*.db
 firmware/src/secrets.h
 server/.env
 
-*.csv
+scripts/*.csv
